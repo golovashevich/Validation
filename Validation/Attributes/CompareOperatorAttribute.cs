@@ -233,6 +233,9 @@ namespace Validation.Attributes {
 		}
 
 
+		/// <summary>
+		/// <see cref="http://www.paraesthesia.com/archive/2010/03/02/the-importance-of-typeid-in-asp.net-mvc-dataannotations-validation-attributes.aspx"/>
+		/// </summary>
 		private object _typeId = new object();
 		public override object TypeId {
 			get {
