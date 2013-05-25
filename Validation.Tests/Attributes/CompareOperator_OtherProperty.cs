@@ -1,12 +1,12 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Validation;
 using Validation.Attributes;
 using Validation.Tests.Attributes;
 
-namespace Web.Tests.Attributes
+namespace Validation.Tests.Attributes
 {
     [TestClass]
     public class CompareOperator_OtherProperty
@@ -38,13 +38,14 @@ namespace Web.Tests.Attributes
             var getOtherPropertyTitle = typeof(CompareOperatorAttribute).GetProperty("OtherPropertyTitle", 
                     BindingFlags.Instance | BindingFlags.NonPublic).GetGetMethod(true);
 
-            var checks = new Tuple<string, string>[] { 
-                    Tuple.Create("WithNonExistentNameAndResourceType", "WithNonExistentNameAndResourceType"),
-                    Tuple.Create("WithDisplayName", "WithDisplayName"), 
-                    Tuple.Create("WithName", "WithName"), 
-                    Tuple.Create("WithNameAndResourceType", "TestFieldValue"),
-                    Tuple.Create("WithNonExistentNameAndResourceType", "WithNonExistentNameAndResourceType"),
-                    Tuple.Create("WithNameAndNullResourceType", "WithNameAndNullResourceType")};
+			var checks = new Checks<string, string>() { 
+					{ "WithNonExistentNameAndResourceType", "WithNonExistentNameAndResourceType" },
+                    { "WithDisplayName", "WithDisplayName" }, 
+                    { "WithName", "WithName" }, 
+                    { "WithNameAndResourceType", "TestFieldValue" },
+                    { "WithNonExistentNameAndResourceType", "WithNonExistentNameAndResourceType" },
+					{ "WithNameAndNullResourceType", "WithNameAndNullResourceType" }};
+
 
             foreach (var check in checks)
             {

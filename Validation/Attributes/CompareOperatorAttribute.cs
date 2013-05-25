@@ -11,7 +11,7 @@ using System.Web.UI.WebControls;
 namespace Validation.Attributes {
 	//TODO: Separate into CompareOperator itself and TypeCheck
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
-	public class CompareOperatorAttribute : ValidationAttribute, IClientValidatable {
+	public class CompareOperatorAttribute : BaseValidationAttribute, IClientValidatable {
 		//TODO: Add default [globalized] messages
 		public string OtherProperty { get; private set; }
 
@@ -215,23 +215,9 @@ namespace Validation.Attributes {
 			}
 		}
 
-
-		public static string FormatPropertyForClientValidation(string property) {
-			if (property == null) {
-				throw new ArgumentException("Value cannot be null or empty.", "property");
-			}
-			return "*." + property;
-		}
-
-
 		public override string FormatErrorMessage(string name) {
-			//http://connect.microsoft.com/VisualStudio/feedback/details/757298/emailaddress-attribute-is-unable-to-load-error-message-from-resource-mvc
-			if (!String.IsNullOrEmpty(ErrorMessageResourceName)) {
-				ErrorMessage = null;
-			}
 			return String.Format(CultureInfo.CurrentCulture, ErrorMessageString, name, OtherPropertyTitle);
 		}
-
 
 		/// <summary>
 		/// <see cref="http://www.paraesthesia.com/archive/2010/03/02/the-importance-of-typeid-in-asp.net-mvc-dataannotations-validation-attributes.aspx"/>
