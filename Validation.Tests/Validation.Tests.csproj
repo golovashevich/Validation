@@ -61,11 +61,13 @@
   <ItemGroup>
     <Compile Include="Attributes\CompareOperatorTests.cs" />
     <Compile Include="Attributes\CompareOperator_OtherProperty.cs" />
+    <Compile Include="Attributes\PropertyHolder.cs" />
     <Compile Include="Attributes\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Attributes\TypeCheckTests.cs" />
     <Compile Include="Checks.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>

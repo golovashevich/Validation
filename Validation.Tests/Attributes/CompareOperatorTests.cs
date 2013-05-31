@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Reflection;
 using System.Web.UI.WebControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Validation;
 using Validation.Attributes;
 
 namespace Validation.Tests.Attributes {
@@ -24,28 +22,16 @@ namespace Validation.Tests.Attributes {
 		[TestMethod]
 		[ExpectedException(typeof(ArgumentNullException))]
 		public void ConstructorWithNull() {
-			new CompareOperatorAttribute(null, ValidationCompareOperator.Equal);
-		}
-
-
-		private class PropertyHolder {
-			public object otherProperty { get; set; }
-			public PropertyHolder NonComparable { get; set; }
-
-			[DebuggerStepThrough]
-			public PropertyHolder() {
-				NonComparable = this;
-			}
+			new CompareOperatorAttribute(null, CompareOperator.Equal);
 		}
 
 
 		[TestMethod]
 		public void DefaultOperatorIsEqual() {
-			Assert.AreEqual(ValidationCompareOperator.Equal,
+			Assert.AreEqual(CompareOperator.Equal,
 					new CompareOperatorAttribute("otherProperty").Operator,
 					"Default CompareOperator is Equal");
 		}
-
 
 		[TestMethod]
 		public void DefaultTypeIsString() {
@@ -105,7 +91,7 @@ namespace Validation.Tests.Attributes {
 			string message = String.Format("Check for {0}: Value is not of one of ValidationDataType types",
 					dataType);
 
-			compareOperator.Operator = ValidationCompareOperator.Equal;
+			compareOperator.Operator = CompareOperator.Equal;
 			holder.otherProperty = validValue;
 			Assert.IsNotNull(compareOperator.GetValidationResult(holder, context), message);
 
@@ -113,7 +99,7 @@ namespace Validation.Tests.Attributes {
 			Assert.IsNotNull(compareOperator.GetValidationResult(validValue, context), message);
 			Assert.IsNotNull(compareOperator.GetValidationResult(invalidValue, context), message);
 
-			compareOperator.Operator = ValidationCompareOperator.DataTypeCheck;
+			var typeCheck = new TypeCheckAttribute(dataType);
 			Assert.IsNotNull(compareOperator.GetValidationResult(invalidValue, context), message);
 		}
 
@@ -150,87 +136,12 @@ namespace Validation.Tests.Attributes {
 
 
 		[TestMethod]
-		public void DataTypeCheckWorksWithDataType() {
-			new CompareOperatorAttribute("test", ValidationCompareOperator.DataTypeCheck,
-					ValidationDataType.Date);
-		}
-
-
-		[TestMethod]
-		public void DataTypeCheckDoesNotRequireOther() {
-			new CompareOperatorAttribute(null, ValidationCompareOperator.DataTypeCheck, ValidationDataType.Integer);
-			new CompareOperatorAttribute(ValidationDataType.Double);
-		}
-
-
-		[TestMethod]
-		public void NullIsConsideredAsValidValue() {
-			foreach (ValidationDataType dataType in Enum.GetValues(typeof(ValidationDataType))) {
-				var compareOperator = new CompareOperatorAttribute(dataType);
-				var context = new ValidationContext(new PropertyHolder() { otherProperty = null });
-				Assert.IsNull(compareOperator.GetValidationResult(null, context),
-						"({0}) Null should be considered as valid for every type", dataType);
-			}
-		}
-
-
-		[TestMethod]
-		public void EmptyStringIsAlwaysValid() {
-			foreach (ValidationDataType dataType in Enum.GetValues(typeof(ValidationDataType))) {
-				var compareOperator = new CompareOperatorAttribute(dataType);
-				var context = new ValidationContext(new PropertyHolder() { otherProperty = "" });
-				Assert.IsNull(compareOperator.GetValidationResult("", context),
-						"({0}) Empty String should be considered as valid for every type", dataType);
-			}
-		}
-
-
-		[TestMethod]
-		public void DataTypeChecksForType() {
-			var checks = new Checks<bool, ValidationDataType, object>() {
-						{ true, ValidationDataType.Date, (object)DateTime.Now} , 
-						{ false, ValidationDataType.Date, (object)Decimal.MaxValue }, 
-						{ true, ValidationDataType.Currency, (object)Decimal.MaxValue }, 
-						{ false, ValidationDataType.Currency, (object)DateTime.Now }, 
-						{ true, ValidationDataType.Double, (object)(DOUBLE_BIG_VALUE) }, 
-						{ false, ValidationDataType.Double, (object)DateTime.Now }, 
-						{ true, ValidationDataType.Integer, (object)Int32.MaxValue }, 
-						{ false, ValidationDataType.Integer, (object)DateTime.Now }, 
-						{ false, ValidationDataType.String, (object)Double.MaxValue },
-						{ false, ValidationDataType.String, (object)DateTime.MaxValue },
-						{ false, ValidationDataType.String, (object)Decimal.MaxValue },
-						{ false, ValidationDataType.String, (object)Int32.MaxValue }};
-
-			foreach (var check in checks) {
-				var holder = new PropertyHolder();
-				var context = new ValidationContext(holder);
-
-				var compareOperator1 = new CompareOperatorAttribute("otherProperty",
-						ValidationCompareOperator.DataTypeCheck, check.Item2);
-				var compareOperator2 = new CompareOperatorAttribute(check.Item2);
-
-				string errorMessage = String.Format("Data type check fails for type {0}, value {1} ({2})",
-						check.Item2, check.Item3, check.Item3.GetType());
-				Assert.AreEqual(check.Item1, null == compareOperator1.GetValidationResult(check.Item3, context),
-						errorMessage);
-				Assert.AreEqual(check.Item1, null == compareOperator2.GetValidationResult(check.Item3, context),
-						errorMessage);
-				if (check.Item2 != ValidationDataType.String) {
-					Assert.AreEqual(check.Item1, null == compareOperator1.GetValidationResult(check.Item3.ToString(),
-							context), errorMessage);
-					Assert.AreEqual(check.Item1, null == compareOperator2.GetValidationResult(check.Item3.ToString(),
-							context), errorMessage);
-				}
-			}
-		}
-
-		[TestMethod]
 		public void ComparisonChecks() {
 			var checks = CreateComparisonChecksTable();
 
 			var holder = new PropertyHolder();
 			var context = new ValidationContext(holder);
-			var mapInfo = typeof(CompareOperatorAttribute).GetField("TypeDataTypeMap",
+			var mapInfo = typeof(BaseTypeCheckAttribute).GetField("TypeDataTypeMap",
 					BindingFlags.NonPublic | BindingFlags.Static);
 			var typeDataTypeMap = (Dictionary<Type, ValidationDataType>)mapInfo.GetValue(null);
 
@@ -270,34 +181,33 @@ namespace Validation.Tests.Attributes {
 			}
 		}
 
-
-		private static Checks<ValidationCompareOperator, Checks<object, object, object>>
+		private static Checks<CompareOperator, Checks<object, object, object>>
 				CreateComparisonChecksTable() {
 			// value2, value 1 -> true, value3, value 1 -> false
 			// Why not Double.MaxValue: http://stackoverflow.com/questions/4441782/why-does-double-tryparse-return-false-for-a-string-containing-double-maxvalue
-			var checks = new Checks<ValidationCompareOperator, Checks<object, object, object>>() {
-					{ ValidationCompareOperator.Equal, new Checks<object, object, object> { 
+			var checks = new Checks<CompareOperator, Checks<object, object, object>>() {
+					{ CompareOperator.Equal, new Checks<object, object, object> { 
 						{ Int32.MinValue, Int32.MinValue, Int32.MaxValue },
 						{ Decimal.MinValue, Decimal.MinValue, Decimal.MaxValue },
 						{ DOUBLE_SMALL_VALUE, DOUBLE_SMALL_VALUE, DOUBLE_BIG_VALUE },
 						{ DateTime.MinValue, DateTime.MinValue, DateTime.MaxValue },
 						{ "test", "test", "not test" }
 					}},
-					{ ValidationCompareOperator.NotEqual, new Checks<object, object, object> { 
+					{ CompareOperator.NotEqual, new Checks<object, object, object> { 
 						{ Int32.MinValue, Int32.MaxValue, Int32.MinValue },
 						{ Decimal.MinValue, Decimal.MaxValue, Decimal.MinValue },
 						{ DOUBLE_SMALL_VALUE, DOUBLE_BIG_VALUE,  DOUBLE_SMALL_VALUE },
 						{ DateTime.MinValue, DateTime.MaxValue, DateTime.MinValue},
 						{ "test", "not test", "test" }
 					}},
-					{ ValidationCompareOperator.GreaterThan, new Checks<object, object, object> { 
+					{ CompareOperator.GreaterThan, new Checks<object, object, object> { 
 						{ Int32.MinValue, Int32.MaxValue, Int32.MinValue },
 						{ Decimal.MinValue, Decimal.MaxValue, Decimal.MinValue },
 						{ DOUBLE_SMALL_VALUE, DOUBLE_BIG_VALUE,  DOUBLE_SMALL_VALUE },
 						{ DateTime.MinValue, DateTime.MaxValue, DateTime.MinValue },
 						{ "test", "west", "test" }
 					}},
-					{ ValidationCompareOperator.GreaterThanEqual, new Checks<object, object, object> { 
+					{ CompareOperator.GreaterThanEqual, new Checks<object, object, object> { 
 						{ Int32.MinValue + 1, Int32.MaxValue, Int32.MinValue }, //greater 
 						{ Int32.MaxValue, Int32.MaxValue, Int32.MinValue }, //equal
 						{ 1.0m, Decimal.MaxValue, Decimal.MinValue },
@@ -309,14 +219,14 @@ namespace Validation.Tests.Attributes {
 						{ "test", "west", "less than test" },
 						{ "test", "test", "less than test" }
 					}},
-					{ ValidationCompareOperator.LessThan, new Checks<object, object, object> { 
+					{ CompareOperator.LessThan, new Checks<object, object, object> { 
 						{ Int32.MaxValue, Int32.MinValue, Int32.MaxValue },
 						{ Decimal.MaxValue, Decimal.MinValue, Decimal.MaxValue },
 						{ DOUBLE_BIG_VALUE, DOUBLE_SMALL_VALUE,  DOUBLE_BIG_VALUE },
 						{ DateTime.MaxValue, DateTime.MinValue, DateTime.MaxValue },
 						{ "west", "test", "west" }
 					}},
-					{ ValidationCompareOperator.LessThanEqual, new Checks<object, object, object> { 
+					{ CompareOperator.LessThanEqual, new Checks<object, object, object> { 
 						{ Int32.MaxValue - 1, Int32.MinValue, Int32.MaxValue }, //less
 						{ Int32.MinValue, Int32.MinValue, Int32.MaxValue }, //equal
 						{ 1.0m, Decimal.MinValue, Decimal.MaxValue },

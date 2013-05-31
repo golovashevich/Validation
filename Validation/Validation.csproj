@@ -47,15 +47,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attributes\BaseValidationAttribute.cs" />
+    <Compile Include="Attributes\CompareOperator.cs" />
     <Compile Include="Attributes\CompareOperatorAttribute.cs" />
     <Compile Include="Attributes\CoupledAttribute.cs" />
+    <Compile Include="Attributes\BaseTypeCheckAttribute.cs" />
+    <Compile Include="Attributes\TypeCheckAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rules\ModelClientValidationCompareRule.cs" />
     <Compile Include="Rules\ModelClientValidationCoupledRule.cs" />
     <Compile Include="Rules\ModelClientValidationTypeCheckRule.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Scripts\Validation.js" />
+    <Content Include="Scripts\Validation.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
