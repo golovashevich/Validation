@@ -84,6 +84,9 @@ function compareOperator_isEmpty(value) {
 }
 
 function compareOperator_isUnknown(value) {
+	if (value == null) {
+		return false; 
+	}
 	return typeof value == "undefined" || typeof value == "unknown"; 
 }
 

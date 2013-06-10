@@ -1,26 +1,15 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.Web.UI.WebControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Validation.Attributes;
 
 namespace Validation.Tests.Attributes {
-
-	[TestClass]
-	public class TypeCheckTests {
+	public abstract class TypeCheckTestsBase {
 		private const double DOUBLE_BIG_VALUE = Double.MaxValue / 2;
-
-		[TestMethod]
-		public void DataTypeCheckWorksWithDataType() {
-			new TypeCheckAttribute(ValidationDataType.Date);
-		}
 
 		[TestMethod]
 		public void NullIsConsideredAsValidValue() {
 			foreach (ValidationDataType dataType in Enum.GetValues(typeof(ValidationDataType))) {
-				var compareOperator = new TypeCheckAttribute(dataType);
-				var context = new ValidationContext(new PropertyHolder() { otherProperty = null });
-				Assert.IsNull(compareOperator.GetValidationResult(null, context),
+				Assert.IsNull(PerformTypeCheck(dataType, null),
 						"({0}) Null should be considered as valid for every type", dataType);
 			}
 		}
@@ -42,23 +31,15 @@ namespace Validation.Tests.Attributes {
 						{ false, ValidationDataType.String, (object)Int32.MaxValue }};
 
 			foreach (var check in checks) {
-				var holder = new PropertyHolder();
-				var context = new ValidationContext(holder);
-
-				var operator1 = new TypeCheckAttribute(check.Item2);
-				var operator2 = new TypeCheckAttribute(check.Item2);
-
 				string errorMessage = String.Format("Data type check fails for type {0}, value {1} ({2})",
 						check.Item2, check.Item3, check.Item3.GetType());
-				Assert.AreEqual(check.Item1, null == operator1.GetValidationResult(check.Item3, context),
-						errorMessage);
-				Assert.AreEqual(check.Item1, null == operator2.GetValidationResult(check.Item3, context),
+				Assert.AreEqual(check.Item1,
+						null == PerformTypeCheck(check.Item2, check.Item3),
 						errorMessage);
 				if (check.Item2 != ValidationDataType.String) {
-					Assert.AreEqual(check.Item1, null == operator1.GetValidationResult(check.Item3.ToString(),
-							context), errorMessage);
-					Assert.AreEqual(check.Item1, null == operator2.GetValidationResult(check.Item3.ToString(),
-							context), errorMessage);
+					Assert.AreEqual(check.Item1,
+							null == PerformTypeCheck(check.Item2, check.Item3.ToString()),
+							errorMessage);
 				}
 			}
 		}
@@ -66,11 +47,11 @@ namespace Validation.Tests.Attributes {
 		[TestMethod]
 		public void EmptyStringIsAlwaysValid() {
 			foreach (ValidationDataType dataType in Enum.GetValues(typeof(ValidationDataType))) {
-				var compareOperator = new TypeCheckAttribute(dataType);
-				var context = new ValidationContext(new PropertyHolder() { otherProperty = "" });
-				Assert.IsNull(compareOperator.GetValidationResult("", context),
+				Assert.IsNull(PerformTypeCheck(dataType, ""),
 						"({0}) Empty String should be considered as valid for every type", dataType);
 			}
 		}
+
+		protected abstract object PerformTypeCheck(ValidationDataType dataType, object value);
 	}
 }
