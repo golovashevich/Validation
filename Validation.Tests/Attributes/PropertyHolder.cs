@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 
 namespace Validation.Tests.Attributes {
-	internal class PropertyHolder {
+	public class PropertyHolder {
 		public object otherProperty { get; set; }
 		public PropertyHolder NonComparable { get; set; }
 

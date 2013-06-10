@@ -16,7 +16,16 @@ namespace Validation.Attributes {
 
 		public CompareOperator Operator { get; set; }
 
-		public string OtherProperty { get; protected set; }
+		private string _otherProperty;
+		public string OtherProperty { 
+			get { return _otherProperty; }
+			set {
+				if (value == null) {
+					throw new ArgumentNullException("OtherProperty");
+				}
+				_otherProperty = value;
+			} 
+		}
 
 		private string _otherPropertyTitle;
 		protected string OtherPropertyTitle {
@@ -31,7 +40,7 @@ namespace Validation.Attributes {
 				throw new ArgumentNullException("otherProperty");
 			}
 
-			OtherProperty = otherProperty;
+			_otherProperty = otherProperty;
 			Operator = compareOperator;
 			Type = dataType;
 		}
@@ -58,34 +67,32 @@ namespace Validation.Attributes {
 						"Could not find a property named {0}.", OtherProperty));
 			}
 
-			object otherPropertyValue = otherPropertyInfo.GetValue(validationContext.ObjectInstance, null);
+			object otherValue = otherPropertyInfo.GetValue(validationContext.ObjectInstance, null);
 
-			if (null == value && null == otherPropertyValue) {
+			if (null == value && null == otherValue) {
 				return null;
 			}
 
-			if (null == value) {
+			if (null == value || null == otherValue) {
 				return null;
 			}
 
 			ValidationDataType valueType;
 			if (!TypeDataTypeMap.TryGetValue(value.GetType(), out valueType)) {
-				TryToExtractOtherPropertyTitle(otherPropertyInfo);
-				return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
+				return null; //we can't judge this pair as know nothing about them
 			}
 
 			if (Type != ValidationDataType.String) {
-				return CompareNonString(value, validationContext, otherPropertyInfo, otherPropertyValue, 
+				return CompareNonString(value, validationContext, otherPropertyInfo, otherValue, 
 						valueType);
 			} else { //Type is string
-				if (!(value is String) || !(otherPropertyValue is String)) {
-					TryToExtractOtherPropertyTitle(otherPropertyInfo);
-					return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
-				}
-				if (String.IsNullOrWhiteSpace((string)value)) {
+				value = Convert.ToString(value);
+				otherValue = Convert.ToString(otherValue);
+				if (String.IsNullOrWhiteSpace((string)value) 
+						|| String.IsNullOrWhiteSpace((string)otherValue)) {
 					return null;
 				}
-				if (!Comparers[Operator]((IComparable)value, (IComparable)otherPropertyValue)) {
+				if (!Comparers[Operator]((IComparable)value, (IComparable)otherValue)) {
 					TryToExtractOtherPropertyTitle(otherPropertyInfo);
 					return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
 				}
@@ -94,36 +101,41 @@ namespace Validation.Attributes {
 		}
 
 		private ValidationResult CompareNonString(object value, ValidationContext validationContext, 
-			PropertyInfo otherPropertyInfo, object otherPropertyValue, ValidationDataType valueType) {
+			PropertyInfo otherPropertyInfo, object otherValue, ValidationDataType valueType) {
 			if (valueType == ValidationDataType.String) {
-				var otherValueString = Convert.ToString(otherPropertyValue);
+				var otherValueString = Convert.ToString(otherValue);
 				if (String.IsNullOrWhiteSpace((string)value) || String.IsNullOrWhiteSpace(otherValueString)) {
 					return null;
 				}
 				try {
 					value = Convert.ChangeType(value, DataTypeTypeMap[Type]);
-					otherPropertyValue = Convert.ChangeType(otherPropertyValue, DataTypeTypeMap[Type]);
+					otherValue = Convert.ChangeType(otherValue, DataTypeTypeMap[Type]);
 				}
 				catch {
 					return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
 				}
 			} else {
-				if (otherPropertyValue == null || value.GetType() != otherPropertyValue.GetType()) {
-					TryToExtractOtherPropertyTitle(otherPropertyInfo);
-					return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
+				ValidationDataType otherValueType;
+				if (!TypeDataTypeMap.TryGetValue(otherValue.GetType(), out otherValueType)) {
+					return null; //we can't judge this pair as know nothing about them
 				}
 
-				if (valueType != Type) {
-					TryToExtractOtherPropertyTitle(otherPropertyInfo);
-					return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
+				if (valueType != Type || otherValueType != Type) {
+					try {
+						value = Convert.ChangeType(value, DataTypeTypeMap[Type]);
+						otherValue = Convert.ChangeType(otherValue, DataTypeTypeMap[Type]);
+					}
+					catch (InvalidCastException) {
+						return null; //we can't judge this pair as know nothing about them
+					}
 				}
 
-				if (!(value is IComparable) || !(otherPropertyValue is IComparable)) {
+				if (!(value is IComparable) || !(otherValue is IComparable)) {
 					TryToExtractOtherPropertyTitle(otherPropertyInfo);
 					return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
 				}
 			}
-			if (!Comparers[Operator]((IComparable)value, (IComparable)otherPropertyValue)) {
+			if (!Comparers[Operator]((IComparable)value, (IComparable)otherValue)) {
 				TryToExtractOtherPropertyTitle(otherPropertyInfo);
 				return new ValidationResult(FormatErrorMessage(validationContext.DisplayName));
 			}

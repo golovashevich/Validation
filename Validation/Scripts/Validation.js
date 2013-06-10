@@ -3,6 +3,12 @@
 }, '');
 
 function compareOperator_IsOfType(dataType, value) {
+	if (compareOperator_isUnknown(value)) {
+		return false;
+	}
+	if (compareOperator_isEmpty(value)) {
+		return true;
+	}
     switch (dataType) {
         case "Integer": {
             return compareOperator_isValidInteger(value);
@@ -20,26 +26,82 @@ function compareOperator_IsOfType(dataType, value) {
             return compareOperator_isValidDate(value);
         }  
 
-        case "String": {
+    	case "String": {
             return typeof (value) == "string";
         }
     }
 }
 
+function compareOperator_isValidCurrency(value) {
+	if (typeof value == "date") {
+		return false;
+	}
+	floatValue = +value;
+	return !isNaN(floatValue) 
+		&& floatValue >= -79228162514264337593543950335 
+		&& floatValue <= 79228162514264337593543950335;
+}
+
+function compareOperator_isValidInteger(value) {
+	if (typeof value == "date") {
+		return false;
+	}
+	//http://stackoverflow.com/questions/12694455/javascript-parsefloat-in-different-cultures?lq=1
+	var stringValue = new String(value);
+	if (stringValue.indexOf(".") != -1) {
+		return false;
+	}
+	floatValue = +value;
+	return !isNaN(floatValue) && floatValue % 1 == 0
+}
+
+function compareOperator_isValidDouble(value) {
+	if (typeof value == "date") {
+		return false;
+	}
+	floatValue = +value;
+	return !isNaN(floatValue) && floatValue > -1.7e308 && floatValue < 1.7e308;
+}
+
+function compareOperator_isValidDate(value) {
+	if (typeof value != "date" && typeof value != "string") {
+		return false;
+	}
+	var dateValue = new Date(value);
+	return !isNaN(dateValue);
+}
+
+function compareOperator_isEmpty(value) {
+	if (value == null) {
+		return true;
+	}
+	if (typeof value != "string") {
+		return false;
+	}
+	if (value.trim() == "") {
+		return true;
+	}
+}
+
+function compareOperator_isUnknown(value) {
+	return typeof value == "undefined" || typeof value == "unknown"; 
+}
+
 jQuery.validator.addMethod('compareoperator', function (value, element, params) {
 	value = value.trim();
-	return compareOperator_performComparison(value, element, params);
+	var otherValue = $(params.element).val().trim();
+	return compareOperator_performComparison(value, otherValue, params.dataType, params.compareOperator);
 }, '');
 
-
-function compareOperator_performComparison(value, element, params) {
-	var otherValue = $(params.element).val().trim();
-
+function compareOperator_performComparison(value, otherValue, dataType, compareOperator) {
+	if (compareOperator_isUnknown(value) || compareOperator_isUnknown(otherValue)) {
+		return true; 
+	}
 	if (compareOperator_isEmpty(value)) {
 		return true;
 	}
 	//TODO: validate delegate map here
-	switch (params.dataType) {
+	switch (dataType) {
 		case "Integer": {
 			if (!compareOperator_isValidInteger(value) || !compareOperator_isValidInteger(otherValue)) {
 				return true;
@@ -71,22 +133,19 @@ function compareOperator_performComparison(value, element, params) {
 			if (!compareOperator_isValidDate(value) || !compareOperator_isValidDate(otherValue)) {
 				return true;
 			}
-			x = new Date(value);
-			y = new Date(otherValue);
+			x = new Date(value).getTime();
+			y = new Date(otherValue).getTime();
 			break;
 		}
 
 		case "String": {
-			if (typeof value != "string" || typeof otherValue != "string") {
-				return true;
-			}
-			x = value;
-			y = otherValue;
+			x = new String(value).toString();
+			y = new String(otherValue).toString();
 			break;
 		}
 	}
 
-	switch (params.compareOperator) {
+	switch (compareOperator) {
 		case "LessThan":
 			return x < y;
 
@@ -106,37 +165,6 @@ function compareOperator_performComparison(value, element, params) {
 			return x != y;
 	}
 }
-
-
-function compareOperator_isValidCurrency(value) {
-	floatValue = +value;
-	return !isNaN(floatValue) && floatValue > -7.9e28 && floatValue < 7.9e28;
-}
-
-function compareOperator_isValidInteger(value) {
-	floatValue = +value;
-	return !isNaN(floatValue) && floatValue % 1 == 0
-}
-
-
-function compareOperator_isValidDouble(value) {
-	floatValue = +value;
-	return !isNaN(floatValue) && floatValue > -1.7e308 && floatValue < 1.7e308;
-}
-
-
-function compareOperator_isValidDate(value) {
-	var dateValue = new Date(value);
-	return !isNaN(dateValue);
-}
-
-
-function compareOperator_isEmpty(value) {
-	if (typeof value == "undefined" || value == null || value.trim() == "") {
-		return true;
-	}
-}
-
 
 jQuery.validator.unobtrusive.adapters.add('compareoperator', ['other', 'datatype', 'compareoperator'],
 		function (options) {
@@ -163,7 +191,7 @@ jQuery.validator.unobtrusive.adapters.add('compareoperator', ['other', 'datatype
 jQuery.validator.unobtrusive.adapters.add('compareoperatortypecheck', ['datatype'],
 		function (options) {
 			options.rules['compareoperatortypecheck'] = {
-				dataType: options.params.datatype,
+				dataType: options.params.datatype
 			};
 
 			if (options.message) {
